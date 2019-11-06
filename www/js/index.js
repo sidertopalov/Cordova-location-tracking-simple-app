@@ -16,9 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-var initTrackingLocation = function () {
-    var bgGeo = window.BackgroundGeolocation;
+var bgGeo;
+var startTrackingLocation = function() {
     console.log(bgGeo);
     bgGeo.onLocation(function(location) {
         console.log('[location] -', location);
@@ -35,7 +34,19 @@ var initTrackingLocation = function () {
     bgGeo.onProviderChange(function(event) {
         console.log('[providerchange] -', event.status, event.enabled, event.gps, event.network);
     });
-    
+
+    bgGeo.getState(function(state) {
+        console.log(state);
+        if (!state.enabled) {
+            bgGeo.start().then(function() {
+                console.log('- BackgroundGeolocation tracking started');
+            });
+        }
+    })
+};
+var initTrackingLocation = function () {
+    bgGeo = window.BackgroundGeolocation;
+
     // 2. Execute #ready method:
     bgGeo.ready({
         reset: true,
@@ -50,13 +61,7 @@ var initTrackingLocation = function () {
         stopOnTerminate: false,
         startOnBoot: true
     }, function(state) {    // <-- Current state provided to #configure callback
-        // 3.  Start tracking
         console.log('BackgroundGeolocation is configured and ready to use', state);
-        if (!state.enabled) {
-            bgGeo.start().then(function() {
-                console.log('- BackgroundGeolocation tracking started');
-            });
-        }
     });
 };
 
@@ -75,11 +80,15 @@ var app = {
     // 'pause', 'resume', etc.
     onDeviceReady: function() {
         this.receivedEvent('deviceready');
-        // initTrackingLocation();
+        initTrackingLocation();
     },
     onPause: function() {
         console.log('App is paused');
-        initTrackingLocation();
+        BackgroundGeolocation.removeListeners(function() {
+            startTrackingLocation();
+        }, function() {
+            startTrackingLocation();
+        });
     },
     onResume: function() {
         console.log('App is resumed');
